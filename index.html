@@ -1,552 +1,1086 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicle Maintenance Tracker</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom Scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .modal-active {
+            display: flex !important;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
-    <!-- Overlay Loader -->
-    <div id="loader" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex-col items-center justify-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid mb-4"></div>
-        <p class="text-white text-lg font-semibold" id="loader-text">Συγχρονισμός...</p>
-    </div>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
 
-    <!-- Navigation & Header -->
-    <nav class="bg-blue-600 text-white shadow-lg">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-3">
-            <h1 class="text-xl font-bold"><i class="fas fa-car-side mr-2"></i>My Garage</h1>
-            <div class="flex items-center space-x-2 w-full md:w-auto">
-                <select id="vehicle-selector" class="bg-blue-700 text-white border border-blue-500 rounded px-3 py-2 flex-grow" onchange="changeVehicle()">
-                    <!-- Options populated by JS -->
-                </select>
-                <button onclick="openEditVehicleModal()" class="bg-yellow-500 hover:bg-yellow-400 text-white px-3 py-2 rounded shadow" title="Edit Vehicle">
-                    <i class="fas fa-pen"></i>
-                </button>
-                <button onclick="openAddVehicleModal()" class="bg-blue-500 hover:bg-blue-400 text-white px-3 py-2 rounded shadow" title="Add Vehicle">
-                    <i class="fas fa-plus"></i>
-                </button>
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 px-4 sm:px-6 py-4 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2 rounded-lg">
+                <i class="fa-solid fa-car-side"></i>
             </div>
-            <div class="flex items-center space-x-2">
-                <button onclick="syncToGitHub()" class="bg-green-500 hover:bg-green-400 text-white px-4 py-2 rounded shadow flex items-center">
-                    <i class="fas fa-cloud-upload-alt mr-2"></i> Sync
-                </button>
-                <button onclick="openSettingsModal()" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded shadow text-white" title="Settings">
-                    <i class="fas fa-cog"></i>
-                </button>
-            </div>
+            <h1 class="text-xl font-bold text-slate-900 hidden sm:block">AutoTracker</h1>
         </div>
-        <!-- Tabs -->
-        <div class="max-w-6xl mx-auto px-4 flex space-x-1 mt-2">
-            <button onclick="switchTab('tab-stats')" id="btn-tab-stats" class="px-4 py-2 bg-white text-blue-600 font-semibold rounded-t-lg">Service & Stats</button>
-            <button onclick="switchTab('tab-reminders')" id="btn-tab-reminders" class="px-4 py-2 bg-blue-700 text-blue-200 hover:text-white rounded-t-lg">Update Reminders</button>
+        
+        <div class="flex items-center gap-4 flex-1 justify-end">
+            <!-- Vehicle Selector -->
+            <div class="relative flex items-center w-full max-w-xs">
+                <i class="fa-solid fa-car text-slate-400 absolute left-3"></i>
+                <select id="vehicleSelector" class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer">
+                    <option value="" disabled selected>Select a vehicle...</option>
+                    <!-- Options populated via JS -->
+                </select>
+                <i class="fa-solid fa-chevron-down text-slate-400 absolute right-3 pointer-events-none text-xs"></i>
+            </div>
+
+            <!-- GitHub Buttons -->
+            <button onclick="syncToGitHub()" class="bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center" title="Sync to Cloud">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+            </button>
+            <button onclick="openGithubSettings()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 p-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center" title="GitHub Settings">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+
+            <!-- Add Vehicle Button -->
+            <button onclick="toggleModal('addVehicleModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Add Vehicle</span>
+            </button>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" id="mainContent">
         
-        <!-- Status Dashboard -->
-        <div id="tab-stats" class="space-y-6">
-            <!-- Top Dashboard -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white p-4 rounded-lg shadow border-l-4 border-gray-800">
-                    <p class="text-sm text-gray-500 uppercase font-bold">Αριθμός Πλαισίου (VIN)</p>
-                    <p class="text-lg font-semibold text-gray-800" id="dash-vin">---</p>
+        <!-- Empty State (No Vehicle Selected/Exists) -->
+        <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto hidden">
+            <div class="bg-blue-50 text-blue-500 p-6 rounded-full mb-6">
+                <i class="fa-solid fa-garage text-5xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Welcome to AutoTracker</h2>
+            <p class="text-slate-500 mb-8">Keep track of your vehicle maintenance, costs, and important dates in one place. Add your first vehicle to get started.</p>
+            <button onclick="toggleModal('addVehicleModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm shadow-blue-200">
+                <i class="fa-solid fa-plus mr-2"></i> Add Your First Vehicle
+            </button>
+        </div>
+
+        <!-- Dashboard Container -->
+        <div id="dashboardContainer" class="max-w-7xl mx-auto space-y-6 hidden">
+            
+            <!-- Dashboard Header / Title -->
+            <div class="flex justify-between items-end">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h2 id="dashboardTitle" class="text-2xl font-bold text-slate-900">Vehicle Overview</h2>
+                        <button onclick="openEditVehicleModal()" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-md text-sm transition-colors" title="Edit Vehicle Details">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </div>
+                    <p id="dashboardSubtitle" class="text-slate-500 text-sm mt-1">License Plate: --- | VIN: ---</p>
                 </div>
-                <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-                    <p class="text-sm text-gray-500 uppercase font-bold">Συνολικό Κόστος</p>
-                    <p class="text-2xl font-bold text-blue-600" id="dash-cost">0.00 €</p>
-                </div>
-                <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
-                    <p class="text-sm text-gray-500 uppercase font-bold">Επόμενο Service / Λάδια</p>
-                    <p class="text-lg font-semibold text-gray-800" id="dash-oil">---</p>
-                </div>
-                <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-                    <p class="text-sm text-gray-500 uppercase font-bold">Επόμενο ΚΤΕΟ</p>
-                    <p class="text-lg font-semibold text-gray-800" id="dash-kteo">---</p>
-                </div>
+                <button onclick="deleteCurrentVehicle()" class="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-trash-can"></i> Remove Vehicle
+                </button>
             </div>
 
-            <!-- Content Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <!-- Add Service Form -->
-                <div class="bg-white p-6 rounded-lg shadow col-span-1">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-2">Καταχώρηση Εργασίας</h2>
-                    <form id="form-service" onsubmit="addService(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Ημερομηνία</label>
-                            <input type="date" id="svc-date" required class="mt-1 w-full border border-gray-300 rounded px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Χιλιόμετρα</label>
-                            <input type="number" id="svc-km" required min="0" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Εργασία / Περιγραφή</label>
-                            <input type="text" id="svc-desc" required placeholder="π.χ. Αλλαγή λαδιών, φρένα..." class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Κόστος (€)</label>
-                            <input type="number" id="svc-cost" required min="0" step="0.01" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Αποθήκευση Εργασίας
-                        </button>
-                    </form>
-                </div>
+            <!-- Tabs Navigation -->
+            <div class="border-b border-slate-200 mt-2 mb-4">
+                <nav class="-mb-px flex space-x-8">
+                    <button onclick="switchTab('service')" id="tab-btn-service" class="border-blue-500 text-blue-600 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-wrench"></i> Service & Stats
+                    </button>
+                    <button onclick="switchTab('reminders')" id="tab-btn-reminders" class="border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors">
+                        <i class="fa-solid fa-bell"></i> Reminders
+                    </button>
+                </nav>
+            </div>
 
-                <!-- History Table -->
-                <div class="bg-white p-6 rounded-lg shadow col-span-1 lg:col-span-2 overflow-hidden flex flex-col">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-2">Ιστορικό Συντήρησης</h2>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm text-left">
-                            <thead class="bg-gray-50 text-gray-600 uppercase">
-                                <tr>
-                                    <th class="py-3 px-4">Ημερομηνία</th>
-                                    <th class="py-3 px-4">Χλμ</th>
-                                    <th class="py-3 px-4">Εργασία</th>
-                                    <th class="py-3 px-4 text-right">Κόστος</th>
-                                    <th class="py-3 px-4 text-center">Ενέργεια</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-body" class="divide-y divide-gray-200">
-                                <!-- JS Populated -->
-                            </tbody>
-                        </table>
-                        <div id="no-data-msg" class="text-center text-gray-500 py-6 hidden">
-                            Δεν υπάρχουν καταχωρημένες εργασίες για αυτό το όχημα.
+            <!-- TAB 1: SERVICE & STATS -->
+            <div id="tab-content-service">
+                <!-- Summary Cards Row -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- Total Cost Card -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Total Maintenance</h3>
+                            <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg"><i class="fa-solid fa-wallet"></i></div>
+                        </div>
+                        <div class="mt-auto">
+                            <span id="totalCostDisplay" class="text-3xl font-bold text-slate-900">€0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Oil Change Reminder Card -->
+                    <div id="oilCard" class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Next Oil Change</h3>
+                            <div class="bg-orange-100 text-orange-600 p-2 rounded-lg"><i class="fa-solid fa-oil-can"></i></div>
+                        </div>
+                        <div class="mt-auto">
+                            <div id="oilDateDisplay" class="text-xl font-bold text-slate-900 mb-1">Not Set</div>
+                            <div id="oilMileageDisplay" class="text-sm text-slate-500">Mileage: Not Set</div>
+                        </div>
+                    </div>
+
+                    <!-- KTEO Reminder Card -->
+                    <div id="kteoCard" class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Next KTEO</h3>
+                            <div class="bg-purple-100 text-purple-600 p-2 rounded-lg"><i class="fa-solid fa-clipboard-check"></i></div>
+                        </div>
+                        <div class="mt-auto">
+                            <div id="kteoDateDisplay" class="text-xl font-bold text-slate-900 mb-1">Not Set</div>
+                            <div id="kteoStatus" class="text-sm text-slate-500">Update reminders below</div>
                         </div>
                     </div>
                 </div>
 
-            </div>
-        </div>
-
-        <!-- Reminders Tab -->
-        <div id="tab-reminders" class="space-y-6 hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Update Oil -->
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-2 text-yellow-600"><i class="fas fa-oil-can mr-2"></i>Ενημέρωση Επόμενου Service / Λαδιών</h2>
-                    <form onsubmit="updateReminders(event, 'oil')" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Πληροφορία / Ημερομηνία / Χλμ</label>
-                            <input type="text" id="rem-oil" required placeholder="π.χ. Στα 120.000 χλμ ή 12/2027" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Left Column: Forms -->
+                    <div class="lg:col-span-1 space-y-6">
+                        
+                        <!-- Add Service Log Form -->
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sm:p-6">
+                            <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-plus-circle text-blue-500"></i> Log Service
+                            </h3>
+                            <form id="addServiceForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                    <input type="date" id="serviceDate" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Task / Work Done</label>
+                                    <input type="text" id="serviceTask" required placeholder="e.g., Brake pad replacement" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Cost (€)</label>
+                                    <input type="number" id="serviceCost" required step="0.01" min="0" placeholder="0.00" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                </div>
+                                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg text-sm font-medium transition-colors">
+                                    Save Record
+                                </button>
+                            </form>
                         </div>
-                        <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded">
-                            Ενημέρωση
+
+                    </div>
+
+                    <!-- Right Column: Service History Table -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
+                            <div class="p-5 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-white z-10 sticky top-0">
+                                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <i class="fa-solid fa-list-check text-slate-500"></i> Service History
+                                </h3>
+                            </div>
+                            <div class="overflow-x-auto flex-1 p-0">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                            <th class="p-4 font-semibold">Date</th>
+                                            <th class="p-4 font-semibold">Task</th>
+                                            <th class="p-4 font-semibold text-right">Cost</th>
+                                            <th class="p-4 font-semibold text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="serviceHistoryBody" class="text-sm text-slate-700 divide-y divide-slate-100">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                                
+                                <!-- Empty History State -->
+                                <div id="emptyHistoryState" class="hidden flex flex-col items-center justify-center p-12 text-center">
+                                    <i class="fa-regular fa-clipboard text-4xl text-slate-300 mb-3"></i>
+                                    <p class="text-slate-500 font-medium">No service records yet</p>
+                                    <p class="text-slate-400 text-sm mt-1">Use the form to log your first maintenance task.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: REMINDERS -->
+            <div id="tab-content-reminders" class="hidden">
+                <div class="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8 mt-6">
+                    <div class="text-center mb-6">
+                        <div class="inline-block bg-orange-100 text-orange-600 p-3 rounded-full mb-3">
+                            <i class="fa-solid fa-bell text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900">Manage Reminders</h3>
+                        <p class="text-slate-500 text-sm mt-1">Set the target dates or mileages to keep track of your vehicle's upcoming maintenance.</p>
+                    </div>
+
+                    <form id="updateRemindersForm" class="space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <!-- Oil Change Box -->
+                            <div class="p-5 bg-orange-50 border border-orange-100 rounded-xl space-y-4">
+                                <h4 class="text-base font-bold text-orange-800 flex items-center gap-2">
+                                    <i class="fa-solid fa-oil-can"></i> Oil Change
+                                </h4>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Target Date</label>
+                                    <input type="date" id="remindOilDate" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Target Mileage (km/mi)</label>
+                                    <input type="number" id="remindOilMileage" placeholder="e.g., 50000" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none bg-white">
+                                </div>
+                            </div>
+
+                            <!-- KTEO Box -->
+                            <div class="p-5 bg-purple-50 border border-purple-100 rounded-xl space-y-4">
+                                <h4 class="text-base font-bold text-purple-800 flex items-center gap-2">
+                                    <i class="fa-solid fa-clipboard-check"></i> KTEO / Inspection
+                                </h4>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                                    <input type="date" id="remindKteoDate" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-400 outline-none bg-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-lg text-sm font-medium transition-colors mt-4">
+                            Save Reminders
                         </button>
                     </form>
                 </div>
-                <!-- Update KTEO -->
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-2 text-red-600"><i class="fas fa-clipboard-check mr-2"></i>Ενημέρωση Επόμενου ΚΤΕΟ</h2>
-                    <form onsubmit="updateReminders(event, 'kteo')" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Ημερομηνία ΚΤΕΟ</label>
-                            <input type="date" id="rem-kteo" required class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
-                        </div>
-                        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-                            Ενημέρωση
-                        </button>
-                    </form>
-                </div>
             </div>
-        </div>
 
+        </div>
     </main>
 
     <!-- Modals -->
-
     <!-- Add Vehicle Modal -->
-    <div id="modal-add-vehicle" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-40 px-4">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 class="text-xl font-bold mb-4">Προσθήκη Νέου Οχήματος</h2>
-            <form onsubmit="saveNewVehicle(event)" class="space-y-4">
+    <div id="addVehicleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md transform scale-95 transition-transform duration-300" id="addVehicleModalContent">
+            <div class="flex justify-between items-center p-5 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-900">Add New Vehicle</h3>
+                <button onclick="toggleModal('addVehicleModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <form id="newVehicleForm" class="p-5 space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Όνομα/Μοντέλο Οχήματος</label>
-                    <input type="text" id="new-veh-name" required class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Make (Brand)</label>
+                    <input type="text" id="vMake" required placeholder="e.g., Toyota" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Αριθμός Πλαισίου (VIN)</label>
-                    <input type="text" id="new-veh-vin" placeholder="Προαιρετικό" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Model</label>
+                    <input type="text" id="vModel" required placeholder="e.g., Corolla" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
-                <div class="flex justify-end space-x-2 mt-4">
-                    <button type="button" onclick="closeModals()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Ακύρωση</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Αποθήκευση</button>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">License Plate</label>
+                    <input type="text" id="vPlate" required placeholder="e.g., ABC-1234" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Chassis Number (VIN)</label>
+                    <input type="text" id="vVin" placeholder="Optional" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-colors">
+                        Add Vehicle
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Edit Vehicle Modal -->
-    <div id="modal-edit-vehicle" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-40 px-4">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 class="text-xl font-bold mb-4">Επεξεργασία Οχήματος</h2>
-            <form onsubmit="saveEditedVehicle(event)" class="space-y-4">
+    <div id="editVehicleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md transform scale-95 transition-transform duration-300" id="editVehicleModalContent">
+            <div class="flex justify-between items-center p-5 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-900">Edit Vehicle Details</h3>
+                <button onclick="toggleModal('editVehicleModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <form id="editVehicleForm" class="p-5 space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Όνομα/Μοντέλο Οχήματος</label>
-                    <input type="text" id="edit-veh-name" required class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Make (Brand)</label>
+                    <input type="text" id="editMake" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Αριθμός Πλαισίου (VIN)</label>
-                    <input type="text" id="edit-veh-vin" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Model</label>
+                    <input type="text" id="editModel" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
-                <div class="flex justify-between mt-4">
-                    <button type="button" onclick="deleteCurrentVehicle()" class="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200">Διαγραφή Οχήματος</button>
-                    <div class="flex space-x-2">
-                        <button type="button" onclick="closeModals()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Ακύρωση</button>
-                        <button type="submit" class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">Ενημέρωση</button>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">License Plate</label>
+                    <input type="text" id="editPlate" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Chassis Number (VIN)</label>
+                    <input type="text" id="editVin" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg font-medium transition-colors">
+                        Save Changes
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Settings Modal (GitHub) -->
-    <div id="modal-settings" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-40 px-4">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 class="text-xl font-bold mb-4"><i class="fab fa-github mr-2"></i>Ρυθμίσεις GitHub Sync</h2>
-            <form onsubmit="saveSettings(event)" class="space-y-4">
+    <!-- GitHub Settings Modal -->
+    <div id="githubSettingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md transform scale-95 transition-transform duration-300" id="githubSettingsModalContent">
+            <div class="flex justify-between items-center p-5 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-900">GitHub Sync Settings</h3>
+                <button onclick="toggleModal('githubSettingsModal')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <form id="githubSettingsForm" class="p-5 space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Repo Owner (Ιδιοκτήτης)</label>
-                    <input type="text" id="set-owner" required placeholder="π.χ. georgios-brn" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">GitHub Token (Classic or Fine-grained)</label>
+                    <input type="password" id="ghToken" placeholder="ghp_..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Repository Name</label>
-                    <input type="text" id="set-repo" required placeholder="π.χ. vehicle-service.github.io" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Repository (owner/repo)</label>
+                    <input type="text" id="ghRepo" required placeholder="e.g., georgios-brn/vehicle-tracker" value="georgios-brn/vehicle-tracker" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">File Name</label>
-                    <input type="text" id="set-file" required value="vehicles.json" class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">File Path</label>
+                    <input type="text" id="ghPath" required placeholder="e.g., data.json" value="data.json" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Personal Access Token</label>
-                    <input type="password" id="set-token" required class="mt-1 w-full border border-gray-300 rounded px-3 py-2">
-                </div>
-                <div class="flex justify-end space-x-2 mt-4">
-                    <button type="button" onclick="closeModals()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">Ακύρωση</button>
-                    <button type="submit" class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">Αποθήκευση</button>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg font-medium transition-colors">
+                        Save Settings
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Alert Modal / Message Box -->
+    <div id="alertModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center transform scale-95 transition-transform duration-300" id="alertModalContent">
+            <div id="alertIcon" class="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-blue-100 text-blue-600 text-xl">
+                <i class="fa-solid fa-info"></i>
+            </div>
+            <h3 id="alertTitle" class="text-lg font-bold text-slate-900 mb-2">Message</h3>
+            <p id="alertMessage" class="text-slate-500 text-sm mb-6">Details here...</p>
+            <button onclick="closeAlert()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg font-medium transition-colors">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center z-[100] flex-col gap-4">
+        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-white"></i>
+        <p class="text-white font-medium" id="loadingText">Syncing with Cloud...</p>
+    </div>
+
+    <!-- JavaScript Application Logic -->
     <script>
-        // Data Structure
-        let vehicles = [];
-        let currentVehicleId = null;
-        let ghSettings = {
-            owner: '',
-            repo: '',
-            file: 'vehicles.json',
-            token: ''
+        // --- Data Structure & State ---
+        let appData = {
+            vehicles: [],
+            activeVehicleId: null
         };
 
-        // DOM Elements
-        const elSelector = document.getElementById('vehicle-selector');
-        const elLoader = document.getElementById('loader');
-        const elLoaderText = document.getElementById('loader-text');
+        const GITHUB_CONFIG_KEY = 'autoTrackerGithubConfig';
+        let githubConfig = JSON.parse(localStorage.getItem(GITHUB_CONFIG_KEY)) || {
+            token: '',
+            repo: 'georgios-brn/vehicle-tracker',
+            path: 'data.json'
+        };
 
-        // Initialization
-        window.onload = () => {
-            loadLocalSettings();
+        // --- GitHub Utilities ---
+        function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+        function b64_to_utf8(str) { return decodeURIComponent(escape(window.atob(str))); }
+
+        function showLoading(text = "Syncing with Cloud...") {
+            document.getElementById('loadingText').textContent = text;
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupEventListeners();
+            document.getElementById('serviceDate').max = new Date().toISOString().split("T")[0];
             
-            // Auto-load from GitHub if configured, otherwise local storage
-            if (ghSettings.owner && ghSettings.repo && ghSettings.token) {
-                loadFromGitHub();
+            // Auto-load from GitHub if token exists, fallback to local
+            if (githubConfig.token) {
+                await loadFromGitHub();
             } else {
                 loadLocalData();
             }
-        };
+        });
 
-        function switchTab(tabId) {
-            document.getElementById('tab-stats').classList.add('hidden');
-            document.getElementById('tab-reminders').classList.add('hidden');
-            
-            document.getElementById('btn-tab-stats').className = 'px-4 py-2 bg-white text-blue-600 font-semibold rounded-t-lg';
-            document.getElementById('btn-tab-reminders').className = 'px-4 py-2 bg-blue-700 text-blue-200 hover:text-white rounded-t-lg';
-
-            document.getElementById(tabId).classList.remove('hidden');
-            document.getElementById('btn-' + tabId).className = 'px-4 py-2 bg-white text-blue-600 font-semibold rounded-t-lg';
+        // --- Core Functions ---
+        function loadLocalData() {
+            const storedData = localStorage.getItem('autoTrackerData');
+            if (storedData) {
+                try {
+                    appData = JSON.parse(storedData);
+                    // Handle legacy data structure or missing keys
+                    if (!appData.vehicles) appData.vehicles = [];
+                } catch (e) {
+                    console.error('Error parsing local storage data', e);
+                    appData = { vehicles: [], activeVehicleId: null };
+                }
+            }
+            updateUI();
         }
 
-        // Loader helper
-        function showLoader(text = 'Συγχρονισμός...') {
-            elLoaderText.innerText = text;
-            elLoader.classList.remove('hidden');
-            elLoader.classList.add('flex');
-        }
-        function hideLoader() {
-            elLoader.classList.add('hidden');
-            elLoader.classList.remove('flex');
+        function saveData() {
+            // Saves locally automatically. 
+            // We force manual GitHub sync to prevent API rate limits on every keystroke.
+            localStorage.setItem('autoTrackerData', JSON.stringify(appData));
+            updateUI();
         }
 
-        // GitHub Sync Functions (CORS FIXED: Cache-Control removed)
         async function loadFromGitHub() {
-            showLoader('Φόρτωση από Cloud...');
+            if (!githubConfig.token) return;
+            showLoading("Loading data from GitHub...");
             try {
-                const url = `https://api.github.com/repos/${ghSettings.owner}/${ghSettings.repo}/contents/${ghSettings.file}?t=${Date.now()}`;
-                
+                const url = `https://api.github.com/repos/${githubConfig.repo}/contents/${githubConfig.path}?t=${Date.now()}`;
                 const response = await fetch(url, {
-                    method: 'GET',
                     headers: {
+                        'Authorization': `token ${githubConfig.token}`,
                         'Accept': 'application/vnd.github.v3+json',
-                        'Authorization': `Bearer ${ghSettings.token}`
+                        'Cache-Control': 'no-cache'
                     }
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    // Decode Base64 safely for Greek chars
-                    const decoded = decodeURIComponent(escape(atob(data.content)));
-                    vehicles = JSON.parse(decoded);
-                    saveLocalData(true); // update local backup quietly
-                    refreshUI();
-                } else if (response.status === 404) {
-                    // File doesn't exist yet, start fresh
-                    console.log("JSON file not found on GitHub. Start fresh.");
+                if (response.status === 404) {
+                    // File doesn't exist yet, load local
+                    hideLoading();
                     loadLocalData();
-                } else {
-                    console.error("GitHub Load Error:", response.status);
-                    loadLocalData();
+                    return;
                 }
+
+                if (!response.ok) throw new Error(`GitHub API Error: ${response.status}`);
+                
+                const data = await response.json();
+                const jsonString = b64_to_utf8(data.content);
+                const parsed = JSON.parse(jsonString);
+                
+                if (parsed) {
+                    appData = parsed;
+                    if (!appData.vehicles) appData.vehicles = [];
+                    localStorage.setItem('autoTrackerData', JSON.stringify(appData));
+                }
+                updateUI();
             } catch (error) {
-                console.error("Fetch Error:", error);
-                loadLocalData(); // fallback
+                console.error(error);
+                showAlert("Sync Error", "Failed to load from GitHub. Showing local data.", "error");
+                loadLocalData();
             } finally {
-                hideLoader();
+                hideLoading();
             }
         }
 
         async function syncToGitHub() {
-            if (!ghSettings.token || !ghSettings.owner || !ghSettings.repo) {
-                alert("Ρυθμίστε πρώτα τα στοιχεία του GitHub από το γρανάζι!");
-                openSettingsModal();
+            if (!githubConfig.token) {
+                showAlert("Configuration Needed", "Please setup your GitHub config first (Gear Icon).", "warning");
+                openGithubSettings();
                 return;
             }
 
-            showLoader('Αποθήκευση στο Cloud...');
-            
+            showLoading("Saving data to GitHub...");
             try {
-                const url = `https://api.github.com/repos/${ghSettings.owner}/${ghSettings.repo}/contents/${ghSettings.file}?t=${Date.now()}`;
-                const headers = {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Authorization': `Bearer ${ghSettings.token}`
-                };
-
-                // Step 1: Get current file SHA
-                let sha = null;
-                const getResp = await fetch(url, { method: 'GET', headers: headers });
+                const url = `https://api.github.com/repos/${githubConfig.repo}/contents/${githubConfig.path}`;
                 
-                if (getResp.ok) {
-                    const getData = await getResp.json();
+                // 1. Get current file SHA
+                let sha = null;
+                const getResponse = await fetch(`${url}?t=${Date.now()}`, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (getResponse.ok) {
+                    const getData = await getResponse.json();
                     sha = getData.sha;
                 }
 
-                // Step 2: Prepare content (Safe Base64 encode for Greek chars)
-                const jsonStr = JSON.stringify(vehicles, null, 2);
-                const encodedContent = btoa(unescape(encodeURIComponent(jsonStr)));
+                // 2. Put new content
+                const contentStr = JSON.stringify(appData, null, 2);
+                const contentB64 = utf8_to_b64(contentStr);
 
                 const body = {
-                    message: `Vehicle data update ${new Date().toISOString()}`,
-                    content: encodedContent
+                    message: `Auto-sync from Vehicle Tracker ${new Date().toISOString()}`,
+                    content: contentB64,
                 };
                 if (sha) body.sha = sha;
 
-                // Step 3: PUT request
-                const putResp = await fetch(url.split('?')[0], {
+                const putResponse = await fetch(url, {
                     method: 'PUT',
-                    headers: headers,
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
                     body: JSON.stringify(body)
                 });
 
-                if (putResp.ok || putResp.status === 201) {
-                    alert("Επιτυχής συγχρονισμός με το GitHub!");
-                } else {
-                    const errText = await putResp.text();
-                    console.error("PUT Error:", errText);
-                    alert("Σφάλμα αποθήκευσης. Ελέγξτε την Κονσόλα (F12).");
+                if (!putResponse.ok) throw new Error(`GitHub API Error: ${putResponse.status}`);
+                
+                showAlert("Success", "Data successfully synced to GitHub!", "success");
+            } catch (error) {
+                console.error(error);
+                showAlert("Sync Error", "Failed to save to GitHub. Check your token and repository permissions.", "error");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function openGithubSettings() {
+            document.getElementById('ghToken').value = githubConfig.token || '';
+            document.getElementById('ghRepo').value = githubConfig.repo || 'georgios-brn/vehicle-tracker';
+            document.getElementById('ghPath').value = githubConfig.path || 'data.json';
+            toggleModal('githubSettingsModal');
+        }
+
+        function updateUI() {
+            renderVehicleSelector();
+            
+            const emptyState = document.getElementById('emptyState');
+            const dashboard = document.getElementById('dashboardContainer');
+
+            if (appData.vehicles.length === 0 || !appData.activeVehicleId) {
+                emptyState.classList.remove('hidden');
+                dashboard.classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+                
+                const activeVehicle = appData.vehicles.find(v => v.id === appData.activeVehicleId);
+                if (activeVehicle) {
+                    renderDashboard(activeVehicle);
+                }
+            }
+        }
+
+        // --- Render Functions ---
+        function renderVehicleSelector() {
+            const selector = document.getElementById('vehicleSelector');
+            // Keep the first disabled option
+            selector.innerHTML = '<option value="" disabled>Select a vehicle...</option>';
+            
+            appData.vehicles.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v.id;
+                option.textContent = `${v.make} ${v.model} (${v.plate})`;
+                if (v.id === appData.activeVehicleId) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            });
+        }
+
+        function renderDashboard(vehicle) {
+            // Update Headers
+            document.getElementById('dashboardTitle').textContent = `${vehicle.make} ${vehicle.model}`;
+            document.getElementById('dashboardSubtitle').textContent = `License Plate: ${vehicle.plate} | VIN: ${vehicle.vin || 'Not Set'}`;
+
+            // Calculate Total Cost
+            const totalCost = vehicle.services.reduce((sum, service) => sum + service.cost, 0);
+            document.getElementById('totalCostDisplay').textContent = `€${totalCost.toFixed(2)}`;
+
+            // Render Reminders & Summary Cards
+            renderReminders(vehicle);
+
+            // Populate Update Reminder Form with current data
+            document.getElementById('remindOilDate').value = vehicle.reminders.oilDate || '';
+            document.getElementById('remindOilMileage').value = vehicle.reminders.oilMileage || '';
+            document.getElementById('remindKteoDate').value = vehicle.reminders.kteoDate || '';
+
+            // Render History Table
+            renderServiceHistory(vehicle);
+        }
+
+        function renderReminders(vehicle) {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const warningDays = 30; // Warn if within 30 days
+
+            // Helper to determine status class
+            const getStatus = (dateStr) => {
+                if (!dateStr) return { status: 'none', bg: 'bg-white', border: 'border-slate-100', text: 'text-slate-900' };
+                const targetDate = new Date(dateStr);
+                const diffTime = targetDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays < 0) return { status: 'overdue', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' };
+                if (diffDays <= warningDays) return { status: 'upcoming', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' };
+                return { status: 'good', bg: 'bg-white', border: 'border-slate-100', text: 'text-slate-900' };
+            };
+
+            // Oil Logic
+            const oilDateDisplay = document.getElementById('oilDateDisplay');
+            const oilMileageDisplay = document.getElementById('oilMileageDisplay');
+            const oilCard = document.getElementById('oilCard');
+            
+            if (vehicle.reminders.oilDate) {
+                oilDateDisplay.textContent = formatDate(vehicle.reminders.oilDate);
+                const style = getStatus(vehicle.reminders.oilDate);
+                applyCardStyle(oilCard, oilDateDisplay, style);
+            } else {
+                oilDateDisplay.textContent = 'Not Set';
+                applyCardStyle(oilCard, oilDateDisplay, {bg: 'bg-white', border: 'border-slate-100', text: 'text-slate-900'});
+            }
+            
+            if (vehicle.reminders.oilMileage) {
+                oilMileageDisplay.textContent = `Target Mileage: ${vehicle.reminders.oilMileage.toLocaleString()}`;
+            } else {
+                oilMileageDisplay.textContent = `Mileage: Not Set`;
+            }
+
+            // KTEO Logic
+            const kteoDateDisplay = document.getElementById('kteoDateDisplay');
+            const kteoStatus = document.getElementById('kteoStatus');
+            const kteoCard = document.getElementById('kteoCard');
+
+            if (vehicle.reminders.kteoDate) {
+                kteoDateDisplay.textContent = formatDate(vehicle.reminders.kteoDate);
+                const style = getStatus(vehicle.reminders.kteoDate);
+                applyCardStyle(kteoCard, kteoDateDisplay, style);
+                
+                if(style.status === 'overdue') kteoStatus.textContent = 'Action Required: Overdue!';
+                else if(style.status === 'upcoming') kteoStatus.textContent = 'Upcoming Soon';
+                else kteoStatus.textContent = 'Valid';
+            } else {
+                kteoDateDisplay.textContent = 'Not Set';
+                kteoStatus.textContent = 'Update reminders below';
+                applyCardStyle(kteoCard, kteoDateDisplay, {bg: 'bg-white', border: 'border-slate-100', text: 'text-slate-900'});
+            }
+        }
+
+        function applyCardStyle(card, textElement, style) {
+            // Remove previous style classes
+            card.className = card.className.replace(/bg-\w+-\d+/g, '').replace(/border-\w+-\d+/g, '');
+            textElement.className = textElement.className.replace(/text-\w+-\d+/g, '');
+            
+            // Apply new classes
+            card.classList.add(style.bg.split(' ')[0], style.border.split(' ')[0]);
+            textElement.classList.add(style.text.split(' ')[0]);
+        }
+
+        function renderServiceHistory(vehicle) {
+            const tbody = document.getElementById('serviceHistoryBody');
+            const emptyState = document.getElementById('emptyHistoryState');
+            tbody.innerHTML = '';
+
+            if (vehicle.services.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+                
+                // Sort services by date descending (newest first)
+                const sortedServices = [...vehicle.services].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                sortedServices.forEach(service => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition-colors group';
+                    
+                    tr.innerHTML = `
+                        <td class="p-4 whitespace-nowrap">${formatDate(service.date)}</td>
+                        <td class="p-4 font-medium text-slate-900">${escapeHTML(service.task)}</td>
+                        <td class="p-4 text-right font-semibold">€${service.cost.toFixed(2)}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="deleteService('${service.id}')" class="text-slate-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50" title="Delete record">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // --- Actions & Event Listeners ---
+        function setupEventListeners() {
+            // GitHub Settings Form Submit
+            document.getElementById('githubSettingsForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                githubConfig.token = document.getElementById('ghToken').value.trim();
+                githubConfig.repo = document.getElementById('ghRepo').value.trim() || 'georgios-brn/vehicle-tracker';
+                githubConfig.path = document.getElementById('ghPath').value.trim() || 'data.json';
+                
+                localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(githubConfig));
+                toggleModal('githubSettingsModal');
+                showAlert('Success', 'GitHub configuration saved! You can now Sync to Cloud.', 'success');
+            });
+
+            // Vehicle Selector change
+            document.getElementById('vehicleSelector').addEventListener('change', (e) => {
+                appData.activeVehicleId = e.target.value;
+                saveData();
+            });
+
+            // Edit Vehicle Form Submit
+            document.getElementById('editVehicleForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!appData.activeVehicleId) return;
+
+                const make = document.getElementById('editMake').value.trim();
+                const model = document.getElementById('editModel').value.trim();
+                const plate = document.getElementById('editPlate').value.trim().toUpperCase();
+                const vin = document.getElementById('editVin').value.trim().toUpperCase();
+
+                if (!make || !model || !plate) {
+                    showAlert('Validation Error', 'Please fill in all required vehicle details.', 'error');
+                    return;
+                }
+                
+                const vehicleIndex = appData.vehicles.findIndex(v => v.id === appData.activeVehicleId);
+                if (vehicleIndex > -1) {
+                    appData.vehicles[vehicleIndex].make = make;
+                    appData.vehicles[vehicleIndex].model = model;
+                    appData.vehicles[vehicleIndex].plate = plate;
+                    appData.vehicles[vehicleIndex].vin = vin;
+                    saveData();
+                    toggleModal('editVehicleModal');
+                    showAlert('Success', 'Vehicle details updated successfully!', 'success');
+                }
+            });
+
+            // Add Vehicle Form Submit
+            document.getElementById('newVehicleForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const make = document.getElementById('vMake').value.trim();
+                const model = document.getElementById('vModel').value.trim();
+                const plate = document.getElementById('vPlate').value.trim().toUpperCase();
+                const vin = document.getElementById('vVin').value.trim().toUpperCase();
+
+                if (!make || !model || !plate) {
+                    showAlert('Validation Error', 'Please fill in all required vehicle details.', 'error');
+                    return;
                 }
 
-            } catch (error) {
-                console.error("Sync Error:", error);
-                alert("Αποτυχία σύνδεσης στο διαδίκτυο ή CORS error.");
-            } finally {
-                hideLoader();
-            }
-        }
+                const newVehicle = {
+                    id: 'v_' + Date.now(),
+                    make,
+                    model,
+                    plate,
+                    vin,
+                    reminders: {
+                        oilDate: '',
+                        oilMileage: null,
+                        kteoDate: ''
+                    },
+                    services: []
+                };
 
-        // Local Storage Methods
-        function loadLocalData() {
-            const data = localStorage.getItem('vehicleAppData');
-            if (data) vehicles = JSON.parse(data);
-            if (vehicles.length > 0 && !currentVehicleId) {
-                currentVehicleId = vehicles[0].id;
-            }
-            refreshUI();
-        }
+                appData.vehicles.push(newVehicle);
+                appData.activeVehicleId = newVehicle.id;
+                
+                saveData();
+                toggleModal('addVehicleModal');
+                e.target.reset();
+                showAlert('Success', 'Vehicle added successfully!', 'success');
+            });
 
-        function saveLocalData(skipRefresh = false) {
-            localStorage.setItem('vehicleAppData', JSON.stringify(vehicles));
-            if(!skipRefresh) refreshUI();
-        }
+            // Add Service Form Submit
+            document.getElementById('addServiceForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                if (!appData.activeVehicleId) return;
 
-        function loadLocalSettings() {
-            const set = localStorage.getItem('vehicleAppGhSettings');
-            if (set) {
-                ghSettings = JSON.parse(set);
-                document.getElementById('set-owner').value = ghSettings.owner;
-                document.getElementById('set-repo').value = ghSettings.repo;
-                document.getElementById('set-file').value = ghSettings.file || 'vehicles.json';
-                document.getElementById('set-token').value = ghSettings.token;
-            }
-        }
+                const date = document.getElementById('serviceDate').value;
+                const task = document.getElementById('serviceTask').value.trim();
+                const costVal = document.getElementById('serviceCost').value;
+                const cost = parseFloat(costVal);
 
-        // UI Updates
-        function refreshUI() {
-            updateSelector();
-            updateDashboard();
-            updateHistoryTable();
-            populateReminderInputs();
-        }
+                if (!date || !task || isNaN(cost) || cost < 0) {
+                    showAlert('Validation Error', 'Please provide valid service details.', 'error');
+                    return;
+                }
 
-        function updateSelector() {
-            elSelector.innerHTML = '';
-            if (vehicles.length === 0) {
-                const opt = document.createElement('option');
-                opt.text = "Κανένα Όχημα";
-                elSelector.add(opt);
-                return;
-            }
-            
-            vehicles.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = v.id;
-                opt.text = v.name;
-                if (v.id === currentVehicleId) opt.selected = true;
-                elSelector.add(opt);
+                const vehicleIndex = appData.vehicles.findIndex(v => v.id === appData.activeVehicleId);
+                if (vehicleIndex > -1) {
+                    const newService = {
+                        id: 's_' + Date.now(),
+                        date,
+                        task,
+                        cost
+                    };
+                    appData.vehicles[vehicleIndex].services.push(newService);
+                    saveData();
+                    e.target.reset();
+                    
+                    // Small visual feedback
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    const originalText = btn.textContent;
+                    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Saved';
+                    btn.classList.replace('bg-slate-900', 'bg-emerald-600');
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.classList.replace('bg-emerald-600', 'bg-slate-900');
+                    }, 2000);
+                }
+            });
+
+            // Update Reminders Form Submit
+            document.getElementById('updateRemindersForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!appData.activeVehicleId) return;
+
+                const oilDate = document.getElementById('remindOilDate').value;
+                const oilMileage = document.getElementById('remindOilMileage').value;
+                const kteoDate = document.getElementById('remindKteoDate').value;
+
+                const vehicleIndex = appData.vehicles.findIndex(v => v.id === appData.activeVehicleId);
+                if (vehicleIndex > -1) {
+                    appData.vehicles[vehicleIndex].reminders = {
+                        oilDate,
+                        oilMileage: oilMileage ? parseInt(oilMileage) : null,
+                        kteoDate
+                    };
+                    saveData();
+                    showAlert('Success', 'Reminders updated successfully!', 'success');
+                }
             });
         }
 
-        function changeVehicle() {
-            if (vehicles.length === 0) return;
-            currentVehicleId = elSelector.value;
-            refreshUI();
-        }
-
-        function getActiveVehicle() {
-            return vehicles.find(v => v.id === currentVehicleId);
-        }
-
-        function updateDashboard() {
-            const v = getActiveVehicle();
-            if (!v) {
-                document.getElementById('dash-vin').innerText = '---';
-                document.getElementById('dash-cost').innerText = '0.00 €';
-                document.getElementById('dash-oil').innerText = '---';
-                document.getElementById('dash-kteo').innerText = '---';
-                return;
-            }
-
-            document.getElementById('dash-vin').innerText = v.vin || 'Μη καταχωρημένο';
-            
-            const total = v.services.reduce((sum, svc) => sum + parseFloat(svc.cost), 0);
-            document.getElementById('dash-cost').innerText = total.toFixed(2) + ' €';
-            
-            document.getElementById('dash-oil').innerText = v.nextOil || 'Δεν έχει οριστεί';
-            document.getElementById('dash-kteo').innerText = v.nextKteo ? formatDate(v.nextKteo) : 'Δεν έχει οριστεί';
-        }
-
-        function populateReminderInputs() {
-            const v = getActiveVehicle();
-            if(!v) return;
-            document.getElementById('rem-oil').value = v.nextOil || '';
-            document.getElementById('rem-kteo').value = v.nextKteo || '';
-        }
-
-        function updateHistoryTable() {
-            const tbody = document.getElementById('history-body');
-            const noData = document.getElementById('no-data-msg');
-            tbody.innerHTML = '';
-            
-            const v = getActiveVehicle();
-            if (!v || v.services.length === 0) {
-                noData.classList.remove('hidden');
-                return;
-            }
-            
-            noData.classList.add('hidden');
-            
-            // Sort services by date descending
-            const sorted = [...v.services].sort((a,b) => new Date(b.date) - new Date(a.date));
-            
-            sorted.forEach(svc => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50";
-                tr.innerHTML = `
-                    <td class="py-2 px-4 border-b">${formatDate(svc.date)}</td>
-                    <td class="py-2 px-4 border-b">${Number(svc.km).toLocaleString('el-GR')}</td>
-                    <td class="py-2 px-4 border-b font-medium">${svc.desc}</td>
-                    <td class="py-2 px-4 border-b text-right text-blue-600 font-bold">${parseFloat(svc.cost).toFixed(2)} €</td>
-                    <td class="py-2 px-4 border-b text-center">
-                        <button onclick="deleteService('${svc.id}')" class="text-red-500 hover:text-red-700" title="Διαγραφή">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+        function deleteService(serviceId) {
+            if (!appData.activeVehicleId) return;
+            // Using custom alert flow instead of confirm()
+            customConfirm("Delete Record", "Are you sure you want to delete this service record? This action cannot be undone.", () => {
+                const vehicleIndex = appData.vehicles.findIndex(v => v.id === appData.activeVehicleId);
+                if (vehicleIndex > -1) {
+                    appData.vehicles[vehicleIndex].services = appData.vehicles[vehicleIndex].services.filter(s => s.id !== serviceId);
+                    saveData();
+                }
             });
         }
 
-        // Actions
-        function addService(e) {
-            e.preventDefault();
-            if (!currentVehicleId) { alert("Προσθέστε πρώτα ένα όχημα."); return; }
+        function deleteCurrentVehicle() {
+            if (!appData.activeVehicleId) return;
+            customConfirm("Remove Vehicle", "Are you sure you want to delete this vehicle and all its service history? This cannot be undone.", () => {
+                appData.vehicles = appData.vehicles.filter(v => v.id !== appData.activeVehicleId);
+                appData.activeVehicleId = appData.vehicles.length > 0 ? appData.vehicles[0].id : null;
+                saveData();
+            });
+        }
+
+        function openEditVehicleModal() {
+            if (!appData.activeVehicleId) return;
+            const vehicle = appData.vehicles.find(v => v.id === appData.activeVehicleId);
+            if (vehicle) {
+                document.getElementById('editMake').value = vehicle.make;
+                document.getElementById('editModel').value = vehicle.model;
+                document.getElementById('editPlate').value = vehicle.plate;
+                document.getElementById('editVin').value = vehicle.vin || '';
+                toggleModal('editVehicleModal');
+            }
+        }
+
+        // --- Utilities & Modals ---
+        function toggleModal(modalID) {
+            const modal = document.getElementById(modalID);
+            const content = document.getElementById(modalID + 'Content');
             
-            const v = getActiveVehicle();
-            const newService = {
-                id: 'svc_' + Date.now(),
-                date: document.getElementById('svc-date').value,
-                km: document.getElementById('svc-km').value,
-                desc: document.getElementById('svc-desc').value,
-                cost: document.getElementById('svc-cost').value
+            if (modal.classList.contains('hidden')) {
+                // Open
+                modal.classList.remove('hidden');
+                modal.classList.add('modal-active');
+                // Trigger reflow for animation
+                void modal.offsetWidth; 
+                modal.classList.remove('opacity-0');
+                modal.classList.add('opacity-100');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            } else {
+                // Close
+                modal.classList.remove('opacity-100');
+                modal.classList.add('opacity-0');
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+                
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('modal-active');
+                }, 300); // match transition duration
+            }
+        }
+
+        // Custom Alert/Confirm Replacement
+        let confirmCallback = null;
+        
+        function showAlert(title, message, type = 'info') {
+            const modal = document.getElementById('alertModal');
+            const content = document.getElementById('alertModalContent');
+            const titleEl = document.getElementById('alertTitle');
+            const msgEl = document.getElementById('alertMessage');
+            const iconContainer = document.getElementById('alertIcon');
+            const btn = content.querySelector('button');
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            
+            // Reset actions
+            btn.textContent = 'OK';
+            btn.onclick = closeAlert;
+            btn.className = 'w-full py-2.5 rounded-lg font-medium transition-colors bg-slate-900 hover:bg-slate-800 text-white';
+            
+            // Icon styling
+            let iconHtml = '<i class="fa-solid fa-info"></i>';
+            iconContainer.className = 'mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 text-xl bg-blue-100 text-blue-600';
+            
+            if (type === 'success') {
+                iconHtml = '<i class="fa-solid fa-check"></i>';
+                iconContainer.className = 'mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 text-xl bg-emerald-100 text-emerald-600';
+            } else if (type === 'error') {
+                iconHtml = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                iconContainer.className = 'mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 text-xl bg-red-100 text-red-600';
+            } else if (type === 'warning') {
+                iconHtml = '<i class="fa-solid fa-question"></i>';
+                iconContainer.className = 'mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 text-xl bg-amber-100 text-amber-600';
+            }
+            iconContainer.innerHTML = iconHtml;
+
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.classList.add('modal-active');
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0');
+            modal.classList.add('opacity-100');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
+
+        function customConfirm(title, message, onConfirm) {
+            showAlert(title, message, 'warning');
+            
+            const content = document.getElementById('alertModalContent');
+            const btn = content.querySelector('button');
+            
+            // Change single OK button into a Cancel/Confirm group
+            const btnContainer = document.createElement('div');
+            btnContainer.className = 'flex gap-3 w-full';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'flex-1 py-2.5 rounded-lg font-medium transition-colors bg-slate-100 hover:bg-slate-200 text-slate-700';
+            cancelBtn.onclick = closeAlert;
+            
+            const confirmBtn = document.createElement('button');
+            confirmBtn.textContent = 'Confirm';
+            confirmBtn.className = 'flex-1 py-2.5 rounded-lg font-medium transition-colors bg-red-600 hover:bg-red-700 text-white';
+            confirmBtn.onclick = () => {
+                onConfirm();
+                closeAlert();
             };
             
-            v.services.push(newService);
-            saveLocalData();
-            e.target.reset();
-        }
-
-        function deleteService(svcId) {
-            if(!confirm("Σίγουρα θέλετε να διαγράψετε αυτή την εγγραφή;")) return;
-            const v = getActiveVehicle();
-            v.services = v.services.filter(s => s.id !== svcId);
-            saveLocalData();
-        }
-
-        function updateReminders(e, type) {
-            e.preventDefault();
-            if (!currentVehicleId) return;
+            btnContainer.appendChild(cancelBtn);
+            btnContainer.appendChild(confirmBtn);
             
-            const v = getActiveVehicle();
-            if (type === 'oil') {
-                v.nextOil = document.getElementById('rem-oil').value;
-            } else if (type === 'kteo') {
-                v.nextKteo = document.getElementById('rem-kteo').value;
-            }
-            saveLocalData();
-            alert("Η υπενθύμιση ενημερώθηκε επιτυχώς!");
-            switchTab('tab-stats'); // Auto switch back to see changes
+            btn.replaceWith(btnContainer);
         }
 
-        // Modals & Vehicle Management
-        function closeModals() {
-            document.getElementById('modal-add-vehicle').classList.add('hidden');
-            document.getElementById('modal-edit-vehicle').classList.add('hidden');
-            document.getElementById('modal-settings').classList.add('hidden');
-            document.getElementById('modal-add-vehicle').classList.
+        function closeAlert() {
+            const modal = document.getElementById('alertModal');
+            const content = document.getElementById('alertModalContent');
+            
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('modal-active');
+                
+                // Restore default button state just in case it was a confirm
+                const btnContainer = content.querySelector('.flex.gap-3');
+                if (btnContainer) {
+                    const defaultBtn = document.createElement('button');
+                    defaultBtn.textContent = 'OK';
+                    defaultBtn.className = 'w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg font-medium transition-colors';
+                    defaultBtn.onclick = closeAlert;
+                    btnContainer.replaceWith(defaultBtn);
+                }
+            }, 300);
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            const serviceContent = document.getElementById('tab-content-service');
+            const remindersContent = document.getElementById('tab-content-reminders');
+            const serviceBtn = document.getElementById('tab-btn-service');
+            const remindersBtn = document.getElementById('tab-btn-reminders');
+            
+            // Hide both contents
+            serviceContent.classList.add('hidden');
+            remindersContent.classList.add('hidden');
+            
+            // Reset button styles
+            const inactiveClasses = ['border-transparent', 'text-slate-500', 'hover:text-slate-700', 'hover:border-slate-300'];
+            const activeClasses = ['border-blue-500', 'text-blue-600'];
+            
+            serviceBtn.classList.remove(...activeClasses);
+            serviceBtn.classList.add(...inactiveClasses);
+            
+            remindersBtn.classList.remove(...activeClasses);
+            remindersBtn.classList.add(...inactiveClasses);
+            
+            // Show selected tab content and update button style
+            if (tabId === 'service') {
+                serviceContent.classList.remove('hidden');
+                serviceBtn.classList.remove(...inactiveClasses);
+                serviceBtn.classList.add(...activeClasses);
+            } else if (tabId === 'reminders') {
+                remindersContent.classList.remove('hidden');
+                remindersBtn.classList.remove(...inactiveClasses);
+                remindersBtn.classList.add(...activeClasses);
+            }
+        }
+
+        // Helper: Format Date string (YYYY-MM-DD to DD/MM/YYYY)
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}/${year}`;
+        }
+
+        // Helper: Escape HTML to prevent basic XSS when rendering strings
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+    </script>
+</body>
+</html>
